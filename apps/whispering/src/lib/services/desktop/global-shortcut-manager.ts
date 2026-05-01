@@ -179,6 +179,17 @@ export function isValidElectronAccelerator(accelerator: string): boolean {
 	const parts = accelerator.split('+');
 	if (parts.length === 0) return false;
 
+	// Single-key accelerators can be either:
+	// 1. A regular key code (e.g., "F1", "A", "Space")
+	// 2. A standalone modifier (e.g., "Control", "Shift")
+	if (parts.length === 1) {
+		const onlyPart = parts[0] as AcceleratorKeyCode | AcceleratorModifier;
+		return (
+			ACCELERATOR_KEY_CODES.includes(onlyPart as AcceleratorKeyCode) ||
+			ACCELERATOR_MODIFIER_KEYS.includes(onlyPart as AcceleratorModifier)
+		);
+	}
+
 	const modifiers = parts.slice(0, -1);
 	const lastPart = parts.at(-1);
 
@@ -223,7 +234,17 @@ export function pressedKeysToTauriAccelerator(
 		}
 	}
 
-	// Must have exactly one key code
+	// If user recorded only a single modifier (for example Right Ctrl),
+	// allow it as a standalone accelerator.
+	if (keyCodes.length === 0 && modifiers.length === 1) {
+		const accelerator = modifiers[0] as Accelerator;
+		if (!isValidElectronAccelerator(accelerator)) {
+			return ShortcutError.GeneratedInvalid({ accelerator });
+		}
+		return Ok(accelerator);
+	}
+
+	// Otherwise we must have exactly one key code
 	if (keyCodes.length === 0) {
 		return ShortcutError.NoKeyCode();
 	}

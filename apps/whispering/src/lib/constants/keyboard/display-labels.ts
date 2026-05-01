@@ -15,6 +15,7 @@ const BROWSER_KEY_DISPLAY_LABELS: Partial<
 
 	// Modifiers
 	control: 'Ctrl',
+	rightcontrol: 'Right Ctrl',
 	shift: 'Shift',
 	alt: 'Alt',
 	meta: 'Cmd',

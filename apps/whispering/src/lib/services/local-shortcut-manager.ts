@@ -11,6 +11,7 @@ import {
 	isSupportedKey,
 	type KeyboardEventPossibleKey,
 	type KeyboardEventSupportedKey,
+	normalizeKeyboardEventKey,
 	normalizeOptionKeyCharacter,
 } from '$lib/constants/keyboard';
 import { IS_MACOS } from '$lib/constants/platform';
@@ -97,7 +98,7 @@ export const LocalShortcutManagerLive = {
 			// Skip shortcut processing if user is typing in an input field
 			if (isTypingInInput()) return;
 
-			let key = e.key.toLowerCase() as KeyboardEventPossibleKey;
+			let key = normalizeKeyboardEventKey(e);
 
 			// macOS Option key normalization:
 			// On macOS, the Option key (Alt) triggers special character insertion.
@@ -147,13 +148,13 @@ export const LocalShortcutManagerLive = {
 			// Skip shortcut processing if user is typing in an input field
 			if (isTypingInInput()) return;
 
-			const key = e.key.toLowerCase() as KeyboardEventPossibleKey;
+			const key = normalizeKeyboardEventKey(e);
 
 			// Ignore keys that are not supported
 			if (!isSupportedKey(key)) return;
 
 			/** Modifier keys that require special handling */
-			const modifierKeys = ['meta', 'control', 'alt', 'shift'];
+			const modifierKeys = ['meta', 'control', 'rightcontrol', 'alt', 'shift'];
 
 			if (modifierKeys.includes(key)) {
 				// Special handling for modifier keys (meta, control, alt, shift)

@@ -280,6 +280,7 @@ function convertToModifier(
 
 	switch (key) {
 		case 'control':
+		case 'rightcontrol':
 			// Control key is consistent across all platforms
 			return 'Control';
 

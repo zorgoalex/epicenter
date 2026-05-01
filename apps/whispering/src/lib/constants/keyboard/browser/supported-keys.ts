@@ -11,6 +11,7 @@ export const KEYBOARD_EVENT_SUPPORTED_KEY_SECTIONS = [
 		description: 'Hold with other keys',
 		keys: [
 			'control',
+			'rightcontrol',
 			'shift',
 			'alt',
 			'meta', // Command on Mac, Windows key on PC

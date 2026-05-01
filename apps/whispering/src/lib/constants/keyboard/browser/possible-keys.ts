@@ -132,6 +132,7 @@ const KEYBOARD_EVENT_POSSIBLE_KEYS = [
 
 	// Modifier keys (lowercase)
 	'control',
+	'rightcontrol',
 	'shift',
 	'alt',
 	'meta', // meta is Command on Mac, Windows key on PC

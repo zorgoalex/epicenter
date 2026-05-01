@@ -3,6 +3,7 @@ import {
 	isSupportedKey,
 	type KeyboardEventPossibleKey,
 	type KeyboardEventSupportedKey,
+	normalizeKeyboardEventKey,
 	normalizeOptionKeyCharacter,
 } from '$lib/constants/keyboard';
 import { IS_MACOS } from '$lib/constants/platform';
@@ -62,7 +63,7 @@ export function createPressedKeys({
 			if (preventDefault) {
 				e.preventDefault();
 			}
-			let key = e.key.toLowerCase() as KeyboardEventPossibleKey;
+			let key = normalizeKeyboardEventKey(e);
 
 			// macOS Option key normalization:
 			// On macOS, the Option key (Alt) triggers special character insertion.
@@ -88,19 +89,20 @@ export function createPressedKeys({
 		});
 
 		const keyup = on(window, 'keyup', (e) => {
-			const key = e.key.toLowerCase() as KeyboardEventPossibleKey;
+			const key = normalizeKeyboardEventKey(e);
 
 			if (!isSupportedKey(key)) return;
 
-			// Special handling for modifier keys (meta, control, alt, shift)
-			// This addresses issues with OS/browser intercepting certain key combinations
-			// where non-modifier keyup events might not fire properly
-			if (
-				key === 'meta' ||
-				key === 'control' ||
-				key === 'alt' ||
-				key === 'shift'
-			) {
+				// Special handling for modifier keys (meta, control, alt, shift)
+				// This addresses issues with OS/browser intercepting certain key combinations
+				// where non-modifier keyup events might not fire properly
+				if (
+					key === 'meta' ||
+					key === 'control' ||
+					key === 'rightcontrol' ||
+					key === 'alt' ||
+					key === 'shift'
+				) {
 				// When a modifier key is released, clear all non-modifier keys
 				// but keep other modifier keys that might still be pressedKeys
 				// This prevents keys from getting "stuck" in the pressedKeys state

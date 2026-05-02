@@ -3,7 +3,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::OnceLock;
 use tauri::{AppHandle, Emitter};
 // removed LRESULT, LPARAM, WPARAM
-use windows_sys::Win32::UI::Input::KeyboardAndMouse::VK_RCONTROL;
+use windows_sys::Win32::UI::Input::KeyboardAndMouse::{VK_CONTROL, VK_RCONTROL};
 use windows_sys::Win32::UI::WindowsAndMessaging::{
     CallNextHookEx, DispatchMessageW, GetMessageW, SetWindowsHookExW, TranslateMessage,
     MSG, WM_KEYDOWN, WM_KEYUP, WM_SYSKEYDOWN, WM_SYSKEYUP,
@@ -16,7 +16,11 @@ static RCTRL_PRESSED: AtomicBool = AtomicBool::new(false);
 unsafe extern "system" fn hook_callback(code: i32, wparam: usize, lparam: isize) -> isize {
     if code >= 0 {
         let kb_struct = *(lparam as *const KBDLLHOOKSTRUCT);
-        if kb_struct.vkCode == VK_RCONTROL as u32 {
+        // LLKHF_EXTENDED is 1. Some keyboards send VK_CONTROL with the extended flag for Right Control.
+        let is_rctrl = kb_struct.vkCode == VK_RCONTROL as u32 || 
+            (kb_struct.vkCode == VK_CONTROL as u32 && (kb_struct.flags & 1) != 0);
+
+        if is_rctrl {
             let msg = wparam as u32;
             let is_down = msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN;
             let is_up = msg == WM_KEYUP || msg == WM_SYSKEYUP;

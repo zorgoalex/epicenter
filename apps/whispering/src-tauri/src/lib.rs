@@ -26,6 +26,9 @@ use command::{execute_command, spawn_command};
 pub mod markdown;
 use markdown::{count_markdown_files, delete_files_in_directory, read_markdown_files, write_markdown_files};
 
+#[cfg(target_os = "windows")]
+pub mod keyboard_hook;
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 #[tokio::main]
 pub async fn run() {
@@ -177,6 +180,9 @@ pub async fn run() {
     let app = builder
         .build(tauri::generate_context!())
         .expect("error while building tauri application");
+
+    #[cfg(target_os = "windows")]
+    keyboard_hook::init(app.handle().clone());
 
     app.run(|handler, event| {
         // Only track events if Aptabase is enabled (key is not empty)

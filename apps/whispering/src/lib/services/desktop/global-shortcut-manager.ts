@@ -1,3 +1,4 @@
+import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import {
 	isRegistered as tauriIsRegistered,
 	register as tauriRegister,
@@ -101,6 +102,8 @@ type GlobalShortcutServiceError =
  */
 export type Accelerator = string & Brand<'Accelerator'>;
 
+const nativeHookUnlisteners = new Map<string, UnlistenFn[]>();
+
 export const GlobalShortcutManagerLive = {
 	async register({
 		accelerator,
@@ -119,6 +122,22 @@ export const GlobalShortcutManagerLive = {
 
 		if (!isValidElectronAccelerator(accelerator)) {
 			return ShortcutError.InvalidFormat({ accelerator });
+		}
+
+		if (accelerator === 'RightControl') {
+			const unlistenPressed = await listen('native-shortcut-pressed', (event) => {
+				if (event.payload === 'RightControl' && on.includes('Pressed')) {
+					callback('Pressed');
+				}
+			});
+			const unlistenReleased = await listen('native-shortcut-released', (event) => {
+				if (event.payload === 'RightControl' && on.includes('Released')) {
+					callback('Released');
+				}
+			});
+			
+			nativeHookUnlisteners.set(accelerator, [unlistenPressed, unlistenReleased]);
+			return Ok(undefined);
 		}
 
 		const { error: registerError } = await tryAsync({
@@ -152,6 +171,15 @@ export const GlobalShortcutManagerLive = {
 	async unregister(
 		accelerator: Accelerator,
 	): Promise<Result<void, GlobalShortcutServiceError>> {
+		if (accelerator === 'RightControl') {
+			const unlisteners = nativeHookUnlisteners.get(accelerator);
+			if (unlisteners) {
+				unlisteners.forEach((unlisten) => unlisten());
+				nativeHookUnlisteners.delete(accelerator);
+			}
+			return Ok(undefined);
+		}
+
 		const isRegistered = await tauriIsRegistered(accelerator);
 		if (!isRegistered) return Ok(undefined);
 
@@ -170,6 +198,11 @@ export const GlobalShortcutManagerLive = {
 	 * are currently registered.
 	 */
 	async unregisterAll(): Promise<Result<void, GlobalShortcutServiceError>> {
+		for (const [accelerator, unlisteners] of nativeHookUnlisteners.entries()) {
+			unlisteners.forEach((unlisten) => unlisten());
+		}
+		nativeHookUnlisteners.clear();
+
 		const { error: unregisterAllError } = await tryAsync({
 			try: () => tauriUnregisterAll(),
 			catch: (error) => ShortcutError.UnregisterAllFailed({ cause: error }),
@@ -190,6 +223,7 @@ export function isValidElectronAccelerator(accelerator: string): boolean {
 
 	// Single-key accelerators must be key codes.
 	if (parts.length === 1) {
+		if (parts[0] === 'RightControl') return true;
 		return ACCELERATOR_KEY_CODES.includes(parts[0] as AcceleratorKeyCode);
 	}
 
@@ -240,6 +274,9 @@ export function pressedKeysToTauriAccelerator(
 	// Modifier-only global shortcuts are not supported by the current backend.
 	// Example: "Control" or "Alt" without a non-modifier key.
 	if (keyCodes.length === 0 && modifiers.length === 1) {
+		if (modifiers[0] === 'RightControl') {
+			return Ok('RightControl' as Accelerator);
+		}
 		return ShortcutError.ModifierOnlyNotSupported({
 			modifier: modifiers[0],
 		});
@@ -302,9 +339,12 @@ function convertToModifier(
 
 	switch (key) {
 		case 'control':
-		case 'rightcontrol':
 			// Control key is consistent across all platforms
 			return 'Control';
+
+		case 'rightcontrol':
+			// Special handling for Right Control via native Windows hook
+			return 'RightControl' as AcceleratorModifier;
 
 		case 'shift':
 			// Shift key is consistent across all platforms

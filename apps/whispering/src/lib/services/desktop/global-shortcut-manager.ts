@@ -34,6 +34,14 @@ const ShortcutError = defineErrors({
 	NoKeyCode: () => ({
 		message: 'No valid key code found in pressed keys',
 	}),
+	ModifierOnlyNotSupported: ({
+		modifier,
+	}: {
+		modifier: AcceleratorModifier;
+	}) => ({
+		message: `Modifier-only global shortcut '${modifier}' is not supported by the current desktop shortcut backend. Please use a key combination like '${modifier}+Space'. Windows low-level hook support is planned in a follow-up update.`,
+		modifier,
+	}),
 	MultipleKeyCodes: () => ({
 		message: 'Multiple key codes not allowed in accelerator',
 	}),
@@ -73,6 +81,7 @@ export type ShortcutError = InferErrors<typeof ShortcutError>;
 type InvalidAcceleratorError =
 	| InferError<typeof ShortcutError.InvalidFormat>
 	| InferError<typeof ShortcutError.NoKeyCode>
+	| InferError<typeof ShortcutError.ModifierOnlyNotSupported>
 	| InferError<typeof ShortcutError.MultipleKeyCodes>
 	| InferError<typeof ShortcutError.GeneratedInvalid>;
 type GlobalShortcutServiceError =
@@ -179,6 +188,11 @@ export function isValidElectronAccelerator(accelerator: string): boolean {
 	const parts = accelerator.split('+');
 	if (parts.length === 0) return false;
 
+	// Single-key accelerators must be key codes.
+	if (parts.length === 1) {
+		return ACCELERATOR_KEY_CODES.includes(parts[0] as AcceleratorKeyCode);
+	}
+
 	const modifiers = parts.slice(0, -1);
 	const lastPart = parts.at(-1);
 
@@ -223,7 +237,15 @@ export function pressedKeysToTauriAccelerator(
 		}
 	}
 
-	// Must have exactly one key code
+	// Modifier-only global shortcuts are not supported by the current backend.
+	// Example: "Control" or "Alt" without a non-modifier key.
+	if (keyCodes.length === 0 && modifiers.length === 1) {
+		return ShortcutError.ModifierOnlyNotSupported({
+			modifier: modifiers[0],
+		});
+	}
+
+	// Otherwise we must have exactly one key code
 	if (keyCodes.length === 0) {
 		return ShortcutError.NoKeyCode();
 	}
@@ -280,6 +302,7 @@ function convertToModifier(
 
 	switch (key) {
 		case 'control':
+		case 'rightcontrol':
 			// Control key is consistent across all platforms
 			return 'Control';
 

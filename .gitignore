@@ -59,3 +59,4 @@ y-sweet-data/
 # Editor / agent tooling state (machine-local)
 .opencode/
 .sisyphus/
+ai_docs/
